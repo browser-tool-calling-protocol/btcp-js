@@ -1,0 +1,49 @@
+{
+  "name": "@btcp/vue",
+  "version": "1.0.0",
+  "description": "Vue bindings for BTCP vanilla client",
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.cjs.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@btcp/vanilla": "^1.0.0"
+  },
+  "peerDependencies": {
+    "vue": ">=3.0.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "rollup": "^4.9.6",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3",
+    "vue": "^3.4.15"
+  },
+  "keywords": [
+    "btcp",
+    "vue",
+    "composable",
+    "ai",
+    "tools"
+  ],
+  "author": "",
+  "license": "MIT"
+}

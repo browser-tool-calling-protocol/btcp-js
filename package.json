@@ -1,0 +1,61 @@
+{
+  "name": "@btcp/vanilla",
+  "version": "1.0.0",
+  "description": "Convenience wrapper for BTCP client",
+  "main": "dist/btcp-vanilla.cjs.js",
+  "module": "dist/btcp-vanilla.esm.js",
+  "browser": "dist/btcp-vanilla.umd.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/btcp-vanilla.esm.js",
+      "require": "./dist/btcp-vanilla.cjs.js",
+      "browser": "./dist/btcp-vanilla.umd.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "unpkg": "dist/btcp-vanilla.min.js",
+  "jsdelivr": "dist/btcp-vanilla.min.js",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "dependencies": {
+    "@anthropic-ai/btcp-client": "^1.0.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@types/node": "^20.11.0",
+    "rollup": "^4.9.6",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  },
+  "keywords": [
+    "btcp",
+    "browser-tool-calling-protocol",
+    "ai",
+    "tools",
+    "browser",
+    "agent"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/browser-tool-calling-protocol/btcp-vanilla-js"
+  }
+}

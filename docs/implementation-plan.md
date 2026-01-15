@@ -1,23 +1,59 @@
 # BTCP Vanilla JS Client - Implementation Plan
 
-This document outlines the implementation plan for the Browser Tool Calling Protocol (BTCP) vanilla JavaScript client library based on the [spec.md](../spec.md).
+This document outlines the implementation plan for a convenience wrapper around the core [`@btcp/client`](https://github.com/browser-tool-calling-protocol/btcp-client) package, providing an ergonomic API for web developers and framework bindings.
+
+---
+
+## Overview
+
+### Philosophy
+
+This package is **not** a reimplementation of BTCP. Instead, it:
+
+1. **Wraps** `@btcp/client` with a developer-friendly API
+2. **Provides** CDN-ready distribution (UMD, IIFE)
+3. **Adds** React and Vue framework bindings
+4. **Simplifies** common patterns (tool registration, connection management)
+5. **Enhances** with optional security features (capability checking)
+
+### What `@btcp/client` Already Provides
+
+| Feature | Status |
+|---------|--------|
+| `BTCPClient` class | ✅ Provided |
+| HTTP Streaming transport (SSE + POST) | ✅ Provided |
+| `ToolExecutor` for tool handling | ✅ Provided |
+| JSON-RPC utilities | ✅ Provided |
+| Connection management | ✅ Provided |
+| Event system (`on`, `off`) | ✅ Provided |
+| Auto-reconnect | ✅ Provided |
+
+### What This Package Adds
+
+| Feature | Status |
+|---------|--------|
+| `createClient()` factory function | 🆕 New |
+| Simplified `registerTool()` with inline handlers | 🆕 New |
+| CDN builds (UMD, IIFE, minified) | 🆕 New |
+| React bindings (`BTCPProvider`, `useBTCPClient`) | 🆕 New |
+| Vue bindings (`useBTCP`, plugin) | 🆕 New |
+| Capability-based security layer | 🆕 New |
+| WebSocket transport option | 🆕 New (optional) |
 
 ---
 
 ## Table of Contents
 
 1. [Project Structure](#1-project-structure)
-2. [Phase 1: Core Foundation](#2-phase-1-core-foundation)
-3. [Phase 2: Transport Layer](#3-phase-2-transport-layer)
-4. [Phase 3: Protocol Implementation](#4-phase-3-protocol-implementation)
-5. [Phase 4: Tool System](#5-phase-4-tool-system)
-6. [Phase 5: Event System](#6-phase-5-event-system)
-7. [Phase 6: Security & Validation](#7-phase-6-security--validation)
-8. [Phase 7: Build & Distribution](#8-phase-7-build--distribution)
-9. [Phase 8: Framework Bindings](#9-phase-8-framework-bindings)
-10. [Phase 9: Testing](#10-phase-9-testing)
-11. [Phase 10: Documentation](#11-phase-10-documentation)
-12. [File Structure Overview](#12-file-structure-overview)
+2. [Phase 1: Project Setup](#2-phase-1-project-setup)
+3. [Phase 2: Core Wrapper](#3-phase-2-core-wrapper)
+4. [Phase 3: Enhanced Tool Registration](#4-phase-3-enhanced-tool-registration)
+5. [Phase 4: Security Layer](#5-phase-4-security-layer)
+6. [Phase 5: Build & Distribution](#6-phase-5-build--distribution)
+7. [Phase 6: Framework Bindings](#7-phase-6-framework-bindings)
+8. [Phase 7: Testing](#8-phase-7-testing)
+9. [Phase 8: Documentation](#9-phase-8-documentation)
+10. [Implementation Order](#10-implementation-order)
 
 ---
 
@@ -26,85 +62,136 @@ This document outlines the implementation plan for the Browser Tool Calling Prot
 ```
 btcp-vanilla-js/
 ├── src/
-│   ├── index.ts                 # Main entry point, exports
-│   ├── client.ts                # BTCPClient implementation
-│   ├── types.ts                 # TypeScript interfaces and types
-│   ├── constants.ts             # Error codes, default values
-│   ├── transport/
-│   │   ├── index.ts             # Transport exports
-│   │   ├── base.ts              # Abstract Transport class
-│   │   ├── websocket.ts         # WebSocket transport
-│   │   └── http-streaming.ts    # SSE + HTTP POST transport
-│   ├── protocol/
-│   │   ├── index.ts             # Protocol exports
-│   │   ├── json-rpc.ts          # JSON-RPC 2.0 message handling
-│   │   └── messages.ts          # BTCP-specific message types
+│   ├── index.ts                 # Main entry, re-exports + createClient
+│   ├── client.ts                # VanillaClient wrapper class
+│   ├── types.ts                 # Extended type definitions
 │   ├── tools/
-│   │   ├── index.ts             # Tool system exports
-│   │   ├── registry.ts          # Tool registration and storage
-│   │   ├── executor.ts          # Tool execution with timeout
-│   │   └── validator.ts         # JSON Schema validation
+│   │   └── registry.ts          # Enhanced tool registry with handlers
 │   ├── security/
-│   │   ├── index.ts             # Security exports
-│   │   ├── capabilities.ts      # Capability checking
-│   │   └── sanitizer.ts         # Input sanitization
-│   ├── events/
-│   │   ├── index.ts             # Event exports
-│   │   └── emitter.ts           # Event emitter implementation
+│   │   └── capabilities.ts      # Optional capability checking
 │   └── utils/
-│       ├── index.ts             # Utility exports
-│       ├── id-generator.ts      # Unique ID generation
-│       └── reconnect.ts         # Exponential backoff logic
+│       └── helpers.ts           # Utility functions
+├── packages/
+│   ├── react/                   # @btcp/react bindings
+│   │   ├── src/
+│   │   │   ├── index.ts
+│   │   │   ├── BTCPProvider.tsx
+│   │   │   ├── useBTCPClient.ts
+│   │   │   └── useToolResult.ts
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   └── vue/                     # @btcp/vue bindings
+│       ├── src/
+│       │   ├── index.ts
+│       │   ├── useBTCP.ts
+│       │   └── plugin.ts
+│       ├── package.json
+│       └── tsconfig.json
 ├── dist/                        # Build output
 ├── tests/
-│   ├── unit/                    # Unit tests
-│   ├── integration/             # Integration tests
-│   └── browser/                 # Browser tests
-├── examples/                    # Example implementations
-├── docs/                        # Documentation
+│   ├── unit/
+│   └── integration/
+├── examples/
+├── docs/
 ├── package.json
 ├── tsconfig.json
-├── rollup.config.js             # Build configuration
+├── rollup.config.js
 └── README.md
 ```
 
 ---
 
-## 2. Phase 1: Core Foundation
+## 2. Phase 1: Project Setup
 
-### 2.1 TypeScript Configuration
+### 2.1 Package Configuration
 
-Create `tsconfig.json` with strict mode and ES2020 target for modern browser support.
+```json
+{
+  "name": "@btcp/vanilla",
+  "version": "1.0.0",
+  "description": "Convenience wrapper for BTCP client with framework bindings",
+  "dependencies": {
+    "@btcp/client": "^1.0.0"
+  },
+  "peerDependencies": {
+    "react": ">=17.0.0",
+    "vue": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true },
+    "vue": { "optional": true }
+  }
+}
+```
 
-### 2.2 Type Definitions (`src/types.ts`)
+### 2.2 TypeScript Configuration
 
-Define all TypeScript interfaces:
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "lib": ["ES2020", "DOM"],
+    "declaration": true,
+    "strict": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "outDir": "./dist"
+  },
+  "include": ["src/**/*"]
+}
+```
+
+---
+
+## 3. Phase 2: Core Wrapper
+
+### 3.1 Type Definitions (`src/types.ts`)
+
+Extend core types with convenience options:
 
 ```typescript
-// Client Options
-interface BTCPClientOptions {
+import type { BTCPClient as CoreClient } from '@btcp/client';
+
+// Extended options for createClient
+export interface CreateClientOptions {
+  /** BTCP server URL */
   serverUrl: string;
-  transport?: 'websocket' | 'http-streaming';
+
+  /** Session ID (optional, auto-generated if not provided) */
+  sessionId?: string;
+
+  /** Enable auto-reconnect (default: true) */
   autoReconnect?: boolean;
-  reconnectInterval?: number;
+
+  /** Reconnect delay in ms (default: 1000) */
+  reconnectDelay?: number;
+
+  /** Max reconnect attempts (default: 5) */
   maxReconnectAttempts?: number;
+
+  /** Connection timeout in ms (default: 10000) */
+  connectionTimeout?: number;
+
+  /** Enable debug logging (default: false) */
+  debug?: boolean;
+
+  /** Authentication config */
   auth?: AuthConfig;
-  metadata?: Record<string, unknown>;
+
+  /** Granted capabilities for security layer */
+  capabilities?: string[];
 }
 
-// Authentication
-interface AuthConfig {
+export interface AuthConfig {
   type: 'bearer' | 'basic' | 'custom';
   token?: string;
   credentials?: { username: string; password: string };
-  customHeaders?: Record<string, string>;
+  headers?: Record<string, string>;
 }
 
-// Connection Status
-type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
-
-// Tool Definition
-interface ToolDefinition {
+// Simplified tool definition with inline handler
+export interface ToolDefinition {
   name: string;
   description: string;
   inputSchema?: JSONSchema;
@@ -113,58 +200,257 @@ interface ToolDefinition {
   version?: string;
 }
 
-// JSON-RPC Types
-interface JSONRPCRequest {
-  jsonrpc: '2.0';
-  method: string;
-  params?: unknown;
-  id?: string | number;
-}
+// Connection status
+export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
 
-interface JSONRPCResponse {
-  jsonrpc: '2.0';
-  result?: unknown;
-  error?: JSONRPCError;
-  id: string | number | null;
-}
+// Event types
+export type BTCPEvent =
+  | 'connect'
+  | 'disconnect'
+  | 'reconnect'
+  | 'error'
+  | 'tool:call'
+  | 'tool:result'
+  | 'message';
+```
 
-interface JSONRPCError {
-  code: number;
-  message: string;
-  data?: unknown;
+### 3.2 Client Wrapper (`src/client.ts`)
+
+Wrapper class that simplifies the core client API:
+
+```typescript
+import { BTCPClient as CoreClient, ToolExecutor } from '@btcp/client';
+import type { CreateClientOptions, ToolDefinition, ConnectionStatus, BTCPEvent } from './types';
+import { ToolRegistry } from './tools/registry';
+import { CapabilityManager } from './security/capabilities';
+
+export class VanillaClient {
+  private core: CoreClient;
+  private executor: ToolExecutor;
+  private registry: ToolRegistry;
+  private capabilities: CapabilityManager;
+  private _status: ConnectionStatus = 'disconnected';
+
+  constructor(options: CreateClientOptions) {
+    // Initialize core client
+    this.core = new CoreClient({
+      serverUrl: options.serverUrl,
+      sessionId: options.sessionId,
+      autoReconnect: options.autoReconnect ?? true,
+      reconnectDelay: options.reconnectDelay ?? 1000,
+      maxReconnectAttempts: options.maxReconnectAttempts ?? 5,
+      connectionTimeout: options.connectionTimeout ?? 10000,
+      debug: options.debug ?? false,
+    });
+
+    this.executor = this.core.getExecutor();
+    this.registry = new ToolRegistry();
+    this.capabilities = new CapabilityManager(options.capabilities);
+
+    this.setupEventForwarding();
+  }
+
+  /** Connect to the BTCP server */
+  async connect(): Promise<void> {
+    this._status = 'connecting';
+    await this.core.connect();
+    // Register all tools with the server
+    await this.syncTools();
+    this._status = 'connected';
+  }
+
+  /** Disconnect from the server */
+  async disconnect(): Promise<void> {
+    await this.core.disconnect();
+    this._status = 'disconnected';
+  }
+
+  /** Current connection status */
+  get status(): ConnectionStatus {
+    return this._status;
+  }
+
+  /** Session ID */
+  get sessionId(): string | undefined {
+    return this.core.getSessionId();
+  }
+
+  /** Register a tool with inline handler */
+  registerTool(definition: ToolDefinition): void {
+    // Check capabilities
+    if (definition.capabilities) {
+      const check = this.capabilities.check(definition.capabilities);
+      if (!check.allowed) {
+        throw new Error(`Missing capabilities: ${check.missing.join(', ')}`);
+      }
+    }
+
+    // Store in registry
+    this.registry.register(definition);
+
+    // Register handler with executor
+    this.executor.registerHandler(definition.name, async (params) => {
+      return definition.handler(params);
+    });
+
+    // If connected, sync with server
+    if (this.core.isConnected()) {
+      this.syncTools();
+    }
+  }
+
+  /** Unregister a tool */
+  unregisterTool(name: string): void {
+    this.registry.unregister(name);
+    // Note: Core client may not support unregistration - tools list update on next sync
+  }
+
+  /** List registered tools */
+  listTools(): ToolDefinition[] {
+    return this.registry.list();
+  }
+
+  /** Subscribe to events */
+  on(event: BTCPEvent, handler: (payload: unknown) => void): () => void {
+    this.core.on(event, handler);
+    return () => this.core.off(event, handler);
+  }
+
+  /** Unsubscribe from events */
+  off(event: BTCPEvent, handler: (payload: unknown) => void): void {
+    this.core.off(event, handler);
+  }
+
+  /** Access the underlying core client */
+  get coreClient(): CoreClient {
+    return this.core;
+  }
+
+  /** Cleanup and destroy */
+  destroy(): void {
+    this.disconnect();
+    this.registry.clear();
+    this.capabilities.clear();
+  }
+
+  private async syncTools(): Promise<void> {
+    const definitions = this.registry.toProtocolFormat();
+    await this.core.registerTools(definitions);
+  }
+
+  private setupEventForwarding(): void {
+    // Forward status changes
+    this.core.on('connect', () => { this._status = 'connected'; });
+    this.core.on('disconnect', () => { this._status = 'disconnected'; });
+    this.core.on('reconnect', () => { this._status = 'reconnecting'; });
+  }
 }
 ```
 
-### 2.3 Constants (`src/constants.ts`)
+### 3.3 Factory Function (`src/index.ts`)
 
-Define error codes and default configuration values:
+Main entry point with `createClient` factory:
 
 ```typescript
-// JSON-RPC Standard Error Codes
-export const ERROR_CODES = {
-  PARSE_ERROR: -32700,
-  INVALID_REQUEST: -32600,
-  METHOD_NOT_FOUND: -32601,
-  INVALID_PARAMS: -32602,
-  INTERNAL_ERROR: -32603,
-  // BTCP Custom Error Codes
-  TOOL_NOT_FOUND: -32000,
-  TOOL_EXECUTION_ERROR: -32001,
-  CAPABILITY_DENIED: -32002,
-  TIMEOUT: -32003,
-} as const;
+import { VanillaClient } from './client';
+import type { CreateClientOptions, ToolDefinition } from './types';
 
-// Default Configuration
-export const DEFAULTS = {
-  TRANSPORT: 'websocket',
-  AUTO_RECONNECT: true,
-  RECONNECT_INTERVAL: 1000,
-  MAX_RECONNECT_ATTEMPTS: 5,
-  TOOL_TIMEOUT: 30000,
-  HEARTBEAT_INTERVAL: 30000,
-} as const;
+// Re-export core utilities
+export {
+  createRequest,
+  createResponse,
+  createTextContent,
+  createImageContent,
+  parseMessage,
+  serializeMessage
+} from '@btcp/client';
 
-// Capabilities
+// Re-export types
+export type {
+  CreateClientOptions,
+  ToolDefinition,
+  ConnectionStatus,
+  BTCPEvent,
+  AuthConfig
+} from './types';
+
+// Main factory function
+export function createClient(options: CreateClientOptions): VanillaClient {
+  return new VanillaClient(options);
+}
+
+// Export class for advanced usage
+export { VanillaClient };
+
+// Default export for CDN usage
+export default { createClient };
+```
+
+---
+
+## 4. Phase 3: Enhanced Tool Registration
+
+### 4.1 Tool Registry (`src/tools/registry.ts`)
+
+Enhanced registry that stores handlers with definitions:
+
+```typescript
+import type { ToolDefinition } from '../types';
+
+export interface ProtocolToolDefinition {
+  name: string;
+  description: string;
+  inputSchema?: unknown;
+  capabilities?: string[];
+  version?: string;
+}
+
+export class ToolRegistry {
+  private tools: Map<string, ToolDefinition> = new Map();
+
+  register(definition: ToolDefinition): void {
+    if (this.tools.has(definition.name)) {
+      console.warn(`Tool "${definition.name}" is being overwritten`);
+    }
+    this.tools.set(definition.name, definition);
+  }
+
+  unregister(name: string): boolean {
+    return this.tools.delete(name);
+  }
+
+  get(name: string): ToolDefinition | undefined {
+    return this.tools.get(name);
+  }
+
+  list(): ToolDefinition[] {
+    return Array.from(this.tools.values());
+  }
+
+  has(name: string): boolean {
+    return this.tools.has(name);
+  }
+
+  clear(): void {
+    this.tools.clear();
+  }
+
+  /** Convert to protocol format (without handlers) */
+  toProtocolFormat(): ProtocolToolDefinition[] {
+    return this.list().map(({ handler, ...rest }) => rest);
+  }
+}
+```
+
+---
+
+## 5. Phase 4: Security Layer
+
+### 5.1 Capability Manager (`src/security/capabilities.ts`)
+
+Optional capability-based security:
+
+```typescript
 export const CAPABILITIES = {
   DOM_READ: 'dom:read',
   DOM_WRITE: 'dom:write',
@@ -174,443 +460,189 @@ export const CAPABILITIES = {
   CLIPBOARD_READ: 'clipboard:read',
   CLIPBOARD_WRITE: 'clipboard:write',
 } as const;
-```
 
----
+export interface CapabilityCheckResult {
+  allowed: boolean;
+  missing: string[];
+}
 
-## 3. Phase 2: Transport Layer
+export class CapabilityManager {
+  private granted: Set<string>;
 
-### 3.1 Base Transport (`src/transport/base.ts`)
+  constructor(capabilities?: string[]) {
+    this.granted = new Set(capabilities ?? Object.values(CAPABILITIES));
+  }
 
-Abstract base class defining the transport interface:
+  grant(capability: string): void {
+    this.granted.add(capability);
+  }
 
-```typescript
-abstract class BaseTransport {
-  protected url: string;
-  protected options: TransportOptions;
-  protected messageHandler: ((msg: JSONRPCMessage) => void) | null = null;
+  revoke(capability: string): void {
+    this.granted.delete(capability);
+  }
 
-  abstract connect(): Promise<void>;
-  abstract disconnect(): Promise<void>;
-  abstract send(message: JSONRPCMessage): Promise<void>;
-  abstract get isConnected(): boolean;
+  has(capability: string): boolean {
+    return this.granted.has(capability);
+  }
 
-  onMessage(handler: (message: JSONRPCMessage) => void): void {
-    this.messageHandler = handler;
+  check(required: string[]): CapabilityCheckResult {
+    const missing = required.filter(cap => !this.granted.has(cap));
+    return {
+      allowed: missing.length === 0,
+      missing,
+    };
+  }
+
+  listGranted(): string[] {
+    return Array.from(this.granted);
+  }
+
+  clear(): void {
+    this.granted.clear();
   }
 }
 ```
 
-### 3.2 WebSocket Transport (`src/transport/websocket.ts`)
-
-Primary transport implementation:
-
-**Features to implement:**
-- Connection establishment with URL and auth headers
-- Automatic ping/pong heartbeat mechanism
-- Message queuing when disconnected
-- Connection state management
-- Error event handling
-- Clean disconnect with proper close codes
-
-**Implementation details:**
-```typescript
-class WebSocketTransport extends BaseTransport {
-  private ws: WebSocket | null = null;
-  private heartbeatInterval: number | null = null;
-  private messageQueue: JSONRPCMessage[] = [];
-
-  async connect(): Promise<void>;
-  async disconnect(): Promise<void>;
-  async send(message: JSONRPCMessage): Promise<void>;
-
-  private setupHeartbeat(): void;
-  private clearHeartbeat(): void;
-  private flushQueue(): void;
-}
-```
-
-### 3.3 HTTP Streaming Transport (`src/transport/http-streaming.ts`)
-
-Alternative transport for CDN/proxy compatibility:
-
-**Features to implement:**
-- SSE (EventSource) for server → client messages
-- HTTP POST for client → server messages
-- Session token management
-- Automatic reconnection for SSE
-- Request queuing and batching
-
-**Implementation details:**
-```typescript
-class HTTPStreamingTransport extends BaseTransport {
-  private eventSource: EventSource | null = null;
-  private sessionToken: string | null = null;
-  private postEndpoint: string;
-
-  async connect(): Promise<void>;
-  async disconnect(): Promise<void>;
-  async send(message: JSONRPCMessage): Promise<void>;
-
-  private setupSSE(): void;
-  private post(message: JSONRPCMessage): Promise<void>;
-}
-```
-
 ---
 
-## 4. Phase 3: Protocol Implementation
+## 6. Phase 5: Build & Distribution
 
-### 4.1 JSON-RPC Handler (`src/protocol/json-rpc.ts`)
-
-Core JSON-RPC 2.0 message handling:
-
-```typescript
-class JSONRPCHandler {
-  private pendingRequests: Map<string | number, PendingRequest>;
-  private requestTimeout: number;
-
-  // Create request messages
-  createRequest(method: string, params?: unknown): JSONRPCRequest;
-  createNotification(method: string, params?: unknown): JSONRPCRequest;
-
-  // Create response messages
-  createResponse(id: string | number, result: unknown): JSONRPCResponse;
-  createErrorResponse(id: string | number, error: JSONRPCError): JSONRPCResponse;
-
-  // Handle incoming messages
-  handleMessage(message: JSONRPCMessage): void;
-
-  // Wait for response
-  waitForResponse(id: string | number): Promise<JSONRPCResponse>;
-
-  // ID generation
-  private generateId(): string;
-}
-```
-
-### 4.2 BTCP Messages (`src/protocol/messages.ts`)
-
-BTCP-specific message builders:
-
-```typescript
-// Tool registration message
-function createToolsRegisterMessage(tools: ToolDefinition[]): JSONRPCRequest;
-
-// Tool list request
-function createToolsListMessage(): JSONRPCRequest;
-
-// Tool result response
-function createToolResultMessage(id: string, result: unknown): JSONRPCResponse;
-
-// Tool error response
-function createToolErrorMessage(id: string, error: JSONRPCError): JSONRPCResponse;
-
-// Parse incoming tool call
-function parseToolCallMessage(message: JSONRPCRequest): ToolCallParams;
-```
-
----
-
-## 5. Phase 4: Tool System
-
-### 5.1 Tool Registry (`src/tools/registry.ts`)
-
-Manages registered tools:
-
-```typescript
-class ToolRegistry {
-  private tools: Map<string, ToolDefinition>;
-
-  register(definition: ToolDefinition): void;
-  unregister(name: string): boolean;
-  get(name: string): ToolDefinition | undefined;
-  list(): ToolDefinition[];
-  has(name: string): boolean;
-  clear(): void;
-
-  // Get tools as protocol format (without handlers)
-  toProtocolFormat(): ProtocolToolDefinition[];
-}
-```
-
-### 5.2 Tool Executor (`src/tools/executor.ts`)
-
-Handles tool execution with timeout and error handling:
-
-```typescript
-class ToolExecutor {
-  private timeout: number;
-
-  async execute(
-    tool: ToolDefinition,
-    params: unknown
-  ): Promise<ToolExecutionResult>;
-
-  private withTimeout<T>(
-    promise: Promise<T>,
-    ms: number
-  ): Promise<T>;
-
-  private wrapResult(result: unknown): ToolResultContent[];
-}
-```
-
-### 5.3 Input Validator (`src/tools/validator.ts`)
-
-JSON Schema validation for tool inputs:
-
-```typescript
-class InputValidator {
-  validate(schema: JSONSchema, data: unknown): ValidationResult;
-
-  private validateType(schema: JSONSchema, data: unknown): boolean;
-  private validateObject(schema: JSONSchema, data: unknown): ValidationError[];
-  private validateArray(schema: JSONSchema, data: unknown): ValidationError[];
-  private validateString(schema: JSONSchema, data: unknown): ValidationError[];
-  private validateNumber(schema: JSONSchema, data: unknown): ValidationError[];
-}
-```
-
-**Note:** Implement a minimal JSON Schema validator to avoid external dependencies. Support:
-- `type` validation (string, number, boolean, object, array, null)
-- `required` properties
-- `properties` for objects
-- `items` for arrays
-- `enum` values
-- `minLength`, `maxLength` for strings
-- `minimum`, `maximum` for numbers
-
----
-
-## 6. Phase 5: Event System
-
-### 6.1 Event Emitter (`src/events/emitter.ts`)
-
-Type-safe event emitter implementation:
-
-```typescript
-type EventHandler<T = unknown> = (payload: T) => void;
-type Unsubscribe = () => void;
-
-class EventEmitter<TEvents extends Record<string, unknown>> {
-  private handlers: Map<keyof TEvents, Set<EventHandler>>;
-
-  on<K extends keyof TEvents>(
-    event: K,
-    handler: EventHandler<TEvents[K]>
-  ): Unsubscribe;
-
-  off<K extends keyof TEvents>(
-    event: K,
-    handler: EventHandler<TEvents[K]>
-  ): void;
-
-  emit<K extends keyof TEvents>(
-    event: K,
-    payload: TEvents[K]
-  ): void;
-
-  once<K extends keyof TEvents>(
-    event: K,
-    handler: EventHandler<TEvents[K]>
-  ): Unsubscribe;
-
-  removeAllListeners(event?: keyof TEvents): void;
-}
-```
-
-### 6.2 BTCP Events (`src/events/index.ts`)
-
-Define event types for the client:
-
-```typescript
-interface BTCPEventPayloads {
-  connect: { sessionId: string };
-  disconnect: { reason: string; code: number };
-  reconnect: { attempt: number };
-  error: { error: Error; context?: string };
-  'tool:call': { name: string; params: unknown; id: string };
-  'tool:result': { name: string; result: unknown; id: string };
-  message: JSONRPCMessage;
-}
-
-type BTCPEvent = keyof BTCPEventPayloads;
-```
-
----
-
-## 7. Phase 6: Security & Validation
-
-### 7.1 Capability Manager (`src/security/capabilities.ts`)
-
-Manages and validates tool capabilities:
-
-```typescript
-class CapabilityManager {
-  private grantedCapabilities: Set<string>;
-
-  grant(capability: string): void;
-  revoke(capability: string): void;
-  has(capability: string): boolean;
-
-  checkTool(tool: ToolDefinition): CapabilityCheckResult;
-  listGranted(): string[];
-  clear(): void;
-}
-
-interface CapabilityCheckResult {
-  allowed: boolean;
-  missing: string[];
-}
-```
-
-### 7.2 Input Sanitizer (`src/security/sanitizer.ts`)
-
-Sanitize inputs before DOM operations:
-
-```typescript
-class Sanitizer {
-  // Sanitize string for safe DOM insertion
-  static sanitizeHTML(input: string): string;
-
-  // Sanitize CSS selector
-  static sanitizeSelector(selector: string): string;
-
-  // Validate URL
-  static isValidURL(url: string): boolean;
-
-  // Check for dangerous patterns
-  static hasDangerousPatterns(input: string): boolean;
-}
-```
-
----
-
-## 8. Phase 7: Build & Distribution
-
-### 8.1 Build Configuration
-
-**Rollup Configuration (`rollup.config.js`):**
+### 6.1 Rollup Configuration
 
 ```javascript
-// Build targets:
-// 1. UMD - Browser global (BTCP.createClient)
-// 2. ESM - ES modules for bundlers
-// 3. CJS - CommonJS for Node.js
-// 4. IIFE - Minified for direct script tag
+import resolve from '@rollup/plugin-node-resolve';
+import commonjs from '@rollup/plugin-commonjs';
+import typescript from '@rollup/plugin-typescript';
+import terser from '@rollup/plugin-terser';
+
+const external = ['@btcp/client'];
 
 export default [
-  // UMD Build
+  // ESM build (for bundlers)
   {
     input: 'src/index.ts',
     output: {
-      file: 'dist/btcp-client.umd.js',
+      file: 'dist/btcp-vanilla.esm.js',
+      format: 'esm',
+      sourcemap: true,
+    },
+    external,
+    plugins: [typescript(), resolve(), commonjs()],
+  },
+
+  // CJS build (for Node.js)
+  {
+    input: 'src/index.ts',
+    output: {
+      file: 'dist/btcp-vanilla.cjs.js',
+      format: 'cjs',
+      sourcemap: true,
+    },
+    external,
+    plugins: [typescript(), resolve(), commonjs()],
+  },
+
+  // UMD build (for browsers, includes @btcp/client)
+  {
+    input: 'src/index.ts',
+    output: {
+      file: 'dist/btcp-vanilla.umd.js',
       format: 'umd',
       name: 'BTCP',
+      sourcemap: true,
+      globals: {},
     },
+    plugins: [typescript(), resolve(), commonjs()],
   },
-  // ESM Build
+
+  // IIFE minified (for CDN)
   {
     input: 'src/index.ts',
     output: {
-      file: 'dist/btcp-client.esm.js',
-      format: 'esm',
-    },
-  },
-  // CJS Build
-  {
-    input: 'src/index.ts',
-    output: {
-      file: 'dist/btcp-client.cjs.js',
-      format: 'cjs',
-    },
-  },
-  // IIFE Minified
-  {
-    input: 'src/index.ts',
-    output: {
-      file: 'dist/btcp-client.min.js',
+      file: 'dist/btcp-vanilla.min.js',
       format: 'iife',
       name: 'BTCP',
+      sourcemap: true,
     },
-    plugins: [terser()],
+    plugins: [typescript(), resolve(), commonjs(), terser()],
   },
 ];
 ```
 
-### 8.2 Package Configuration
-
-**package.json exports:**
+### 6.2 Package Exports
 
 ```json
 {
-  "name": "@btcp/client",
-  "version": "1.0.0",
-  "main": "dist/btcp-client.cjs.js",
-  "module": "dist/btcp-client.esm.js",
-  "browser": "dist/btcp-client.umd.js",
-  "types": "dist/types/index.d.ts",
+  "main": "dist/btcp-vanilla.cjs.js",
+  "module": "dist/btcp-vanilla.esm.js",
+  "browser": "dist/btcp-vanilla.umd.js",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/btcp-client.esm.js",
-      "require": "./dist/btcp-client.cjs.js",
-      "browser": "./dist/btcp-client.umd.js",
-      "types": "./dist/types/index.d.ts"
+      "import": "./dist/btcp-vanilla.esm.js",
+      "require": "./dist/btcp-vanilla.cjs.js",
+      "browser": "./dist/btcp-vanilla.umd.js",
+      "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist"],
-  "sideEffects": false
+  "unpkg": "dist/btcp-vanilla.min.js",
+  "jsdelivr": "dist/btcp-vanilla.min.js"
 }
 ```
 
-### 8.3 Bundle Size Strategy
-
-Target: < 5 KB (minified + gzip) for core
-
-**Strategies:**
-- No external dependencies
-- Tree-shaking friendly exports
-- Optional transport loading
-- Minimal JSON Schema validator
-
 ---
 
-## 9. Phase 8: Framework Bindings
+## 7. Phase 6: Framework Bindings
 
-### 9.1 React Bindings (`packages/react/`)
+### 7.1 React Bindings (`packages/react/`)
 
-**Structure:**
-```
-packages/react/
-├── src/
-│   ├── index.ts
-│   ├── BTCPProvider.tsx
-│   ├── useBTCPClient.ts
-│   └── useToolResult.ts
-├── package.json
-└── tsconfig.json
-```
-
-**Implementation:**
+#### Provider Component
 
 ```typescript
-// BTCPProvider.tsx
+// packages/react/src/BTCPProvider.tsx
+import React, { createContext, useContext, useRef, useState, useEffect } from 'react';
+import { createClient, VanillaClient, CreateClientOptions, ConnectionStatus } from '@btcp/vanilla';
+
+interface BTCPContextValue {
+  client: VanillaClient | null;
+  status: ConnectionStatus;
+}
+
 const BTCPContext = createContext<BTCPContextValue | null>(null);
+
+export interface BTCPProviderProps {
+  serverUrl: string;
+  options?: Omit<CreateClientOptions, 'serverUrl'>;
+  children: React.ReactNode;
+  autoConnect?: boolean;
+}
 
 export function BTCPProvider({
   serverUrl,
   options,
   children,
+  autoConnect = true
 }: BTCPProviderProps) {
-  const clientRef = useRef<BTCPClient | null>(null);
+  const clientRef = useRef<VanillaClient | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
 
   useEffect(() => {
-    clientRef.current = createClient({ serverUrl, ...options });
-    // Setup event listeners
-    // Connect on mount, disconnect on unmount
-  }, []);
+    const client = createClient({ serverUrl, ...options });
+    clientRef.current = client;
+
+    client.on('connect', () => setStatus('connected'));
+    client.on('disconnect', () => setStatus('disconnected'));
+    client.on('reconnect', () => setStatus('reconnecting'));
+
+    if (autoConnect) {
+      setStatus('connecting');
+      client.connect();
+    }
+
+    return () => {
+      client.destroy();
+    };
+  }, [serverUrl]);
 
   return (
     <BTCPContext.Provider value={{ client: clientRef.current, status }}>
@@ -619,236 +651,227 @@ export function BTCPProvider({
   );
 }
 
-// useBTCPClient.ts
-export function useBTCPClient() {
+export function useBTCPContext(): BTCPContextValue {
   const context = useContext(BTCPContext);
-  if (!context) throw new Error('useBTCPClient must be used within BTCPProvider');
+  if (!context) {
+    throw new Error('useBTCPContext must be used within BTCPProvider');
+  }
+  return context;
+}
+```
+
+#### Client Hook
+
+```typescript
+// packages/react/src/useBTCPClient.ts
+import { useCallback } from 'react';
+import { useBTCPContext } from './BTCPProvider';
+import type { ToolDefinition } from '@btcp/vanilla';
+
+export function useBTCPClient() {
+  const { client, status } = useBTCPContext();
+
+  const registerTool = useCallback((definition: ToolDefinition) => {
+    client?.registerTool(definition);
+  }, [client]);
+
+  const unregisterTool = useCallback((name: string) => {
+    client?.unregisterTool(name);
+  }, [client]);
 
   return {
-    client: context.client,
-    status: context.status,
-    registerTool: (def) => context.client?.registerTool(def),
-    tools: context.client?.listTools() ?? [],
+    client,
+    status,
+    isConnected: status === 'connected',
+    registerTool,
+    unregisterTool,
+    tools: client?.listTools() ?? [],
   };
 }
 ```
 
-### 9.2 Vue Bindings (`packages/vue/`)
+### 7.2 Vue Bindings (`packages/vue/`)
 
-**Structure:**
-```
-packages/vue/
-├── src/
-│   ├── index.ts
-│   ├── useBTCP.ts
-│   └── plugin.ts
-├── package.json
-└── tsconfig.json
-```
-
-**Implementation:**
+#### Composable
 
 ```typescript
-// useBTCP.ts
-export function useBTCP(options: BTCPClientOptions) {
-  const client = ref<BTCPClient | null>(null);
+// packages/vue/src/useBTCP.ts
+import { ref, readonly, onMounted, onUnmounted, Ref } from 'vue';
+import { createClient, VanillaClient, CreateClientOptions, ConnectionStatus, ToolDefinition } from '@btcp/vanilla';
+
+export function useBTCP(options: CreateClientOptions) {
+  const client = ref<VanillaClient | null>(null);
   const status = ref<ConnectionStatus>('disconnected');
   const tools = ref<ToolDefinition[]>([]);
 
-  onMounted(() => {
-    client.value = createClient(options);
-    // Setup reactive bindings
+  onMounted(async () => {
+    const instance = createClient(options);
+    client.value = instance;
+
+    instance.on('connect', () => { status.value = 'connected'; });
+    instance.on('disconnect', () => { status.value = 'disconnected'; });
+    instance.on('reconnect', () => { status.value = 'reconnecting'; });
+
+    status.value = 'connecting';
+    await instance.connect();
   });
 
   onUnmounted(() => {
     client.value?.destroy();
   });
 
+  const registerTool = (definition: ToolDefinition) => {
+    client.value?.registerTool(definition);
+    tools.value = client.value?.listTools() ?? [];
+  };
+
+  const unregisterTool = (name: string) => {
+    client.value?.unregisterTool(name);
+    tools.value = client.value?.listTools() ?? [];
+  };
+
   return {
-    client: readonly(client),
+    client: readonly(client) as Readonly<Ref<VanillaClient | null>>,
     status: readonly(status),
     tools: readonly(tools),
-    registerTool: (def) => {
-      client.value?.registerTool(def);
-      tools.value = client.value?.listTools() ?? [];
-    },
+    isConnected: () => status.value === 'connected',
+    registerTool,
+    unregisterTool,
   };
 }
 ```
 
----
-
-## 10. Phase 9: Testing
-
-### 10.1 Unit Tests (`tests/unit/`)
-
-**Test files:**
-- `transport/websocket.test.ts` - WebSocket transport
-- `transport/http-streaming.test.ts` - HTTP streaming transport
-- `protocol/json-rpc.test.ts` - JSON-RPC message handling
-- `tools/registry.test.ts` - Tool registration
-- `tools/executor.test.ts` - Tool execution
-- `tools/validator.test.ts` - Input validation
-- `events/emitter.test.ts` - Event system
-- `client.test.ts` - Main client
-
-### 10.2 Integration Tests (`tests/integration/`)
-
-**Test scenarios:**
-- Full connection lifecycle
-- Tool registration and invocation
-- Multiple concurrent tool calls
-- Reconnection behavior
-- Error handling and recovery
-- Authentication flows
-
-**Mock Server:**
-Create a mock BTCP server for integration testing:
+#### Plugin
 
 ```typescript
-// tests/mocks/btcp-server.ts
-class MockBTCPServer {
-  private wss: WebSocketServer;
-  private sessions: Map<string, MockSession>;
+// packages/vue/src/plugin.ts
+import type { App } from 'vue';
+import type { CreateClientOptions } from '@btcp/vanilla';
+import { useBTCP } from './useBTCP';
 
-  constructor(port: number);
-  simulateToolCall(sessionId: string, toolName: string, params: unknown): void;
-  getRegisteredTools(sessionId: string): ToolDefinition[];
-  close(): Promise<void>;
-}
+export const BTCPPlugin = {
+  install(app: App, options: CreateClientOptions) {
+    const btcp = useBTCP(options);
+    app.provide('btcp', btcp);
+    app.config.globalProperties.$btcp = btcp;
+  },
+};
 ```
-
-### 10.3 Browser Tests (`tests/browser/`)
-
-**Playwright/Cypress tests for:**
-- Chrome, Firefox, Safari, Edge compatibility
-- CDN script loading
-- Memory leak detection
-- Real WebSocket connections
-- Real SSE connections
 
 ---
 
-## 11. Phase 10: Documentation
+## 8. Phase 7: Testing
 
-### 11.1 Documentation Structure
+### 8.1 Unit Tests
+
+**Files:**
+- `tests/unit/client.test.ts` - VanillaClient wrapper
+- `tests/unit/registry.test.ts` - Tool registry
+- `tests/unit/capabilities.test.ts` - Capability manager
+
+**Focus areas:**
+- Correct delegation to `@btcp/client`
+- Tool registration with handlers
+- Capability checking
+- Event forwarding
+
+### 8.2 Integration Tests
+
+**Scenarios:**
+- End-to-end with mock server
+- Tool registration and invocation
+- Reconnection behavior
+- Framework bindings (React, Vue)
+
+---
+
+## 9. Phase 8: Documentation
+
+### 9.1 Documentation Structure
 
 ```
 docs/
-├── quick-start.md          # 5-minute integration guide
-├── api-reference.md        # Full TypeScript API docs
-├── protocol-guide.md       # JSON-RPC message formats
-├── security-guide.md       # Capabilities and best practices
+├── quick-start.md           # 5-minute setup guide
+├── api-reference.md         # API documentation
 ├── framework-guides/
-│   ├── react.md
-│   ├── vue.md
-│   └── svelte.md
+│   ├── react.md             # React integration
+│   └── vue.md               # Vue integration
 ├── examples/
-│   ├── basic-usage.md
-│   ├── custom-tools.md
-│   └── authentication.md
+│   ├── cdn-usage.md         # Script tag usage
+│   ├── tool-registration.md # Custom tools
+│   └── capabilities.md      # Security features
 └── migration/
-    └── v1-to-v2.md
+    └── from-core.md         # Migrating from @btcp/client
 ```
 
-### 11.2 API Documentation
-
-Generate TypeDoc documentation from TypeScript source.
-
 ---
 
-## 12. File Structure Overview
-
-### Complete Source Files
-
-| File | Description | Lines (est.) |
-|------|-------------|--------------|
-| `src/index.ts` | Main exports | 30 |
-| `src/client.ts` | BTCPClient class | 250 |
-| `src/types.ts` | Type definitions | 150 |
-| `src/constants.ts` | Constants | 50 |
-| `src/transport/base.ts` | Base transport | 50 |
-| `src/transport/websocket.ts` | WebSocket transport | 200 |
-| `src/transport/http-streaming.ts` | HTTP streaming | 180 |
-| `src/protocol/json-rpc.ts` | JSON-RPC handler | 150 |
-| `src/protocol/messages.ts` | Message builders | 80 |
-| `src/tools/registry.ts` | Tool registry | 80 |
-| `src/tools/executor.ts` | Tool executor | 100 |
-| `src/tools/validator.ts` | JSON Schema validator | 200 |
-| `src/security/capabilities.ts` | Capability manager | 60 |
-| `src/security/sanitizer.ts` | Input sanitizer | 80 |
-| `src/events/emitter.ts` | Event emitter | 80 |
-| `src/utils/id-generator.ts` | ID generation | 20 |
-| `src/utils/reconnect.ts` | Reconnection logic | 50 |
-| **Total** | | **~1,810** |
-
----
-
-## Implementation Order
+## 10. Implementation Order
 
 ### Recommended Sequence
 
-1. **Foundation**
-   - Set up project structure
+1. **Project Setup**
+   - Initialize package with `@btcp/client` dependency
    - Configure TypeScript
-   - Define types and constants
+   - Set up build tooling
 
-2. **Core Infrastructure**
-   - Event emitter
-   - Utility functions (ID generation, reconnect)
-   - JSON-RPC handler
+2. **Core Wrapper**
+   - Implement `VanillaClient` class
+   - Create `createClient` factory
+   - Set up re-exports from core
 
-3. **Transport Layer**
-   - Base transport class
-   - WebSocket transport
-   - HTTP streaming transport
+3. **Tool System**
+   - Implement `ToolRegistry`
+   - Wire up handler registration with `ToolExecutor`
 
-4. **Tool System**
-   - Tool registry
-   - Input validator
-   - Tool executor
+4. **Security Layer**
+   - Implement `CapabilityManager`
+   - Integrate with tool registration
 
-5. **Security**
-   - Capability manager
-   - Input sanitizer
+5. **Build Configuration**
+   - Configure Rollup for all output formats
+   - Set up package exports
+   - Generate type declarations
 
-6. **Client Assembly**
-   - BTCPClient class
-   - Integration of all components
-   - Main exports
+6. **Framework Bindings**
+   - React package (`@btcp/react`)
+   - Vue package (`@btcp/vue`)
 
-7. **Build Setup**
-   - Rollup configuration
-   - Package.json setup
-   - TypeScript declaration generation
-
-8. **Testing**
+7. **Testing**
    - Unit tests
    - Integration tests
-   - Browser tests
 
-9. **Framework Bindings**
-   - React package
-   - Vue package
+8. **Documentation**
+   - Quick start guide
+   - API reference
+   - Examples
 
-10. **Documentation**
-    - Quick start guide
-    - API reference
-    - Examples
+---
+
+## File Summary
+
+| File | Description | Lines (est.) |
+|------|-------------|--------------|
+| `src/index.ts` | Main exports, factory | 40 |
+| `src/client.ts` | VanillaClient wrapper | 120 |
+| `src/types.ts` | Type definitions | 60 |
+| `src/tools/registry.ts` | Tool registry | 50 |
+| `src/security/capabilities.ts` | Capability manager | 50 |
+| `packages/react/src/*` | React bindings | 100 |
+| `packages/vue/src/*` | Vue bindings | 80 |
+| **Total** | | **~500** |
 
 ---
 
 ## Success Criteria
 
-- [ ] All TypeScript interfaces match spec exactly
-- [ ] Core bundle < 5 KB (minified + gzip)
-- [ ] Full bundle < 10 KB (minified + gzip)
-- [ ] Zero external dependencies
-- [ ] 90%+ test coverage
-- [ ] Cross-browser compatibility (Chrome, Firefox, Safari, Edge)
+- [ ] `createClient()` works with simple options
+- [ ] `registerTool()` accepts inline handlers
 - [ ] CDN script tag works out of the box
-- [ ] React and Vue bindings functional
-- [ ] All JSON-RPC 2.0 error codes implemented
-- [ ] Capability-based security functional
-- [ ] Automatic reconnection working
-- [ ] Documentation complete
+- [ ] React `BTCPProvider` and `useBTCPClient` functional
+- [ ] Vue `useBTCP` composable functional
+- [ ] Capability checking prevents unauthorized tool registration
+- [ ] All events forwarded correctly from core client
+- [ ] Bundle size < 15 KB (minified + gzip, including `@btcp/client`)
+- [ ] TypeScript types fully documented
+- [ ] 80%+ test coverage on wrapper code
